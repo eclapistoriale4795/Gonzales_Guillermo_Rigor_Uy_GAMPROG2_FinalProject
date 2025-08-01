@@ -7,6 +7,8 @@ using UnityEngine;
 
 public class SC_FPSController : MonoBehaviour
 {
+    /*
+    
     public float walkingSpeed = 7.5f;
     public float runningSpeed = 11.5f;
     public float jumpSpeed = 8.0f;
@@ -21,11 +23,20 @@ public class SC_FPSController : MonoBehaviour
 
     [HideInInspector]
     public bool canMove = true;
+    */
+    public Player PlayerSC;         //The main scriptable object that can be changeable
+    public Player DefaultPlayerSC;  //Default Player Scriptable Object that the main scriptable object will instantiate from
+    CharacterController characterController;
+    public Camera playerCamera;
+    Vector3 moveDirection = Vector3.zero;
+    float rotationX = 0f;
 
     void Start()
     {
         characterController = GetComponent<CharacterController>();
-
+        Player defaults = Instantiate(DefaultPlayerSC);
+        PlayerSC = defaults;
+        PlayerSC.canMove = true;
         // Lock cursor
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
@@ -33,20 +44,38 @@ public class SC_FPSController : MonoBehaviour
 
     void Update()
     {
+        print(PlayerSC.stamina);
         //We are grounded, ro recalculate move direction based on axes
         Vector3 forward = transform.TransformDirection(Vector3.forward);
         Vector3 right = transform.TransformDirection(Vector3.right);
 
         //Press Left shift to run
         bool isRunning = Input.GetKey(KeyCode.LeftShift);
-        float curSpeedX = canMove ? (isRunning ? runningSpeed : walkingSpeed) * Input.GetAxis("Vertical") : 0;
-        float curSpeedY = canMove ? (isRunning ? runningSpeed : walkingSpeed) * Input.GetAxis("Horizontal") : 0;
+        float curSpeedX = PlayerSC.canMove ? (isRunning ? PlayerSC.runningSpeed : PlayerSC.walkingSpeed) * Input.GetAxis("Vertical") : 0;
+        float curSpeedY = PlayerSC.canMove ? (isRunning ? PlayerSC.runningSpeed : PlayerSC.walkingSpeed) * Input.GetAxis("Horizontal") : 0;
         float movementDirectionY = moveDirection.y;
         moveDirection = (forward * curSpeedX) + (right * curSpeedY);
-
-        if (Input.GetButton("Jump") && canMove && characterController.isGrounded)
+        
+        PlayerSC.isMoving = (moveDirection != new Vector3(0,0,0)) ? true : false;
+        if(PlayerSC.isMoving && isRunning)
         {
-            moveDirection.y = jumpSpeed;
+            if (PlayerSC.stamina > 0)
+            {
+                PlayerSC.stamina -= Time.deltaTime;
+                Debug.Log("Stamina is being used.");
+            }
+        }
+        else
+        {
+            if (PlayerSC.stamina < 100)
+            {
+                PlayerSC.stamina += 1 * Time.deltaTime;
+            }
+        }
+
+        if (Input.GetButton("Jump") && PlayerSC.canMove && characterController.isGrounded)
+        {
+            moveDirection.y = PlayerSC.jumpSpeed;
         }
 
         else
@@ -60,7 +89,7 @@ public class SC_FPSController : MonoBehaviour
         //Apply gravity. Gravity is multiplied by deltaTime twice 
         if (!characterController.isGrounded)
         {
-            moveDirection.y -= gravity * Time.deltaTime;
+            moveDirection.y -= PlayerSC.gravity * Time.deltaTime;
         }
 
         // Move the controller
@@ -68,12 +97,12 @@ public class SC_FPSController : MonoBehaviour
 
         //Player and Camera rotation
 
-        if (canMove)
+        if (PlayerSC.canMove)
         {
-            rotationX += -Input.GetAxis("Mouse Y") * lookSpeed;
-            rotationX = Mathf.Clamp(rotationX, -lookXLimit, lookXLimit);
+            rotationX += -Input.GetAxis("Mouse Y") * PlayerSC.lookSpeed;
+            rotationX = Mathf.Clamp(rotationX, -PlayerSC.lookXLimit, PlayerSC.lookXLimit);
             playerCamera.transform.localRotation = Quaternion.Euler(rotationX, 0, 0);
-            transform.rotation *= Quaternion.Euler(0, Input.GetAxis("Mouse X") * lookSpeed, 0);
+            transform.rotation *= Quaternion.Euler(0, Input.GetAxis("Mouse X") * PlayerSC.lookSpeed, 0);
 
         }
     }
